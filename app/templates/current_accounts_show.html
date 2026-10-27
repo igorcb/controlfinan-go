@@ -1,0 +1,39 @@
+{{define "title"}}Lançamento{{end}}
+{{define "content"}}{{$e := .Entry}}
+<h1 class="mb-6 text-2xl font-semibold">Lançamento</h1>
+
+<div class="card">
+  <dl class="grid gap-4 text-sm sm:grid-cols-2">
+    <div>
+      <dt class="text-slate-500">Data</dt>
+      <dd class="font-medium">{{$e.DateBR}}</dd>
+    </div>
+    <div>
+      <dt class="text-slate-500">Tipo</dt>
+      <dd class="font-medium">{{$e.TypeName}}</dd>
+    </div>
+    <div>
+      <dt class="text-slate-500">Conta</dt>
+      <dd class="font-medium">{{$e.NameAccount}}</dd>
+    </div>
+    <div>
+      <dt class="text-slate-500">Categoria</dt>
+      <dd class="font-medium">{{$e.NameCost}}</dd>
+    </div>
+    <div>
+      <dt class="text-slate-500">Valor</dt>
+      <dd class="font-medium {{if $e.IsCredit}}text-emerald-700{{else}}text-red-700{{end}}">{{currency $e.SignedCents}}</dd>
+    </div>
+    <div>
+      <dt class="text-slate-500">Histórico</dt>
+      <dd class="font-medium">{{if $e.HistoricText}}{{$e.HistoricText}}{{else}}—{{end}}</dd>
+    </div>
+  </dl>
+
+  <div class="mt-6 flex flex-wrap gap-3">
+    <a class="btn-primary" href="/current_accounts/{{$e.ID}}/edit">Editar</a>
+    <a class="btn-secondary" href="/current_accounts">Voltar</a>
+    <form class="button_to" method="post" action="/current_accounts/{{$e.ID}}" data-confirm="Excluir este lançamento?"><input type="hidden" name="_method" value="delete" autocomplete="off"><button class="btn-danger" type="submit">Excluir</button><input type="hidden" name="authenticity_token" value="{{.CSRF}}" autocomplete="off"></form>
+  </div>
+</div>
+{{end}}

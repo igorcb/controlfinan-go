@@ -1,0 +1,80 @@
+{{define "title"}}Conta Corrente{{end}}
+{{define "content"}}
+<div class="mb-4 flex items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Conta Corrente</h1>
+    <p class="mt-1 text-sm text-slate-600">{{if .DateLabel}}Saldo do dia {{.DateLabel}}{{else}}Saldo total{{end}}</p>
+    <p class="text-2xl font-bold {{amountClass .Balance}}">{{currency .Balance}}</p>
+  </div>
+
+  <a class="btn-primary hidden sm:inline-flex" href="/current_accounts/new">Novo lançamento</a>
+</div>
+
+<form class="mb-4 flex items-end gap-2" action="/current_accounts" accept-charset="UTF-8" method="get">
+  <div class="min-w-0 flex-1 sm:flex-none">
+    <label class="label" for="date">Consultar saldo do dia</label>
+    <input class="input" type="date" value="{{.DateValue}}" name="date" id="date">
+  </div>
+  <input type="submit" value="Consultar" class="btn-secondary">
+  {{if .DateLabel}}<a class="btn-secondary" href="/current_accounts">Limpar</a>{{end}}
+</form>
+
+{{if not .Entries}}
+  <p class="card text-center text-sm text-slate-500">Nenhum lançamento encontrado.</p>
+{{else}}
+  <ul class="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm sm:hidden">
+    {{range .Entries}}
+      <li>
+        <a class="flex items-center justify-between gap-3 px-4 py-3 active:bg-slate-50" href="/current_accounts/{{.ID}}">
+          <div class="min-w-0">
+            <p class="truncate font-medium">{{.NameCost}}</p>
+            <p class="truncate text-xs text-slate-500">
+              {{.DayMonth}} · {{.NameAccount}}{{if .HistoricText}} · {{.HistoricText}}{{end}}
+            </p>
+          </div>
+          <span class="shrink-0 font-semibold {{if .IsCredit}}text-emerald-700{{else}}text-red-700{{end}}">
+            {{currency .SignedCents}}
+          </span>
+        </a>
+      </li>
+    {{end}}
+  </ul>
+
+  <div class="hidden overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm sm:block">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-4 py-3">Data</th>
+          <th class="px-4 py-3">Conta</th>
+          <th class="px-4 py-3">Categoria</th>
+          <th class="px-4 py-3">Histórico</th>
+          <th class="px-4 py-3 text-right">Valor</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {{range .Entries}}
+          <tr id="current_account_{{.ID}}" class="hover:bg-slate-50">
+            <td class="whitespace-nowrap px-4 py-3">{{.DateBR}}</td>
+            <td class="px-4 py-3">{{.NameAccount}}</td>
+            <td class="px-4 py-3">{{.NameCost}}</td>
+            <td class="px-4 py-3 text-slate-600">{{.HistoricText}}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-medium {{if .IsCredit}}text-emerald-700{{else}}text-red-700{{end}}">
+              {{currency .SignedCents}}
+            </td>
+            <td class="whitespace-nowrap px-4 py-3 text-right">
+              <a class="link" href="/current_accounts/{{.ID}}">Ver</a>
+              <a class="link ml-2" href="/current_accounts/{{.ID}}/edit">Editar</a>
+            </td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+{{end}}
+
+<nav class="mt-4 flex justify-between gap-3">
+  {{if gt .Page 1}}<a class="btn-secondary" href="/current_accounts?{{.DateParam}}page={{.PreviousPage}}">← Mais recentes</a>{{end}}
+  {{if .NextPage}}<a class="btn-secondary ml-auto" href="/current_accounts?{{.DateParam}}page={{.NextPageNumber}}">Mais antigos →</a>{{end}}
+</nav>
+{{end}}

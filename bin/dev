@@ -1,0 +1,6 @@
+#!/bin/sh
+# Development: build the CSS, then compile and run the app (restart the container after Go changes).
+set -e
+go mod download
+tailwindcss -i assets/app.tailwind.css -o app/static/css/app.css
+exec go run .

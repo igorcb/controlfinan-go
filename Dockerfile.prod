@@ -1,0 +1,24 @@
+# Production image: a static Go binary (templates, CSS, JS and the time zone database embedded) on an empty base.
+FROM python:3.12-slim AS css
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL -o /usr/local/bin/tailwindcss \
+       https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.3/tailwindcss-linux-x64 \
+    && chmod +x /usr/local/bin/tailwindcss
+WORKDIR /src
+COPY assets ./assets
+COPY app/templates ./app/templates
+RUN tailwindcss -i assets/app.tailwind.css -o app/static/css/app.css --minify
+
+FROM golang:1.25-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+COPY --from=css /src/app/static/css/app.css app/static/css/app.css
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /controlfinan .
+
+FROM scratch
+COPY --from=build /controlfinan /controlfinan
+USER 65534:65534
+EXPOSE 8000
+ENTRYPOINT ["/controlfinan"]
