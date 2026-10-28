@@ -48,7 +48,7 @@ Os valores em dinheiro ficam em centavos (`int64`), sem ponto flutuante.
 
 ## Benchmark
 
-O benchmark que compara as sete versões do ControlFinan (Rails, Django, Laravel, Go, Java, Rust e C#), com os mesmos dados e os mesmos limites de CPU e memória, fica no repositório do app de referência: [controlfinan-rails8-hotwire/benchmark](https://github.com/igorcb/controlfinan-rails8-hotwire/tree/main/benchmark).
+O benchmark que compara as nove versões do ControlFinan (Rails, Django, Laravel, Go, Java, Rust, C#, Node.js e Elixir), com os mesmos dados e os mesmos limites de CPU e memória, fica no repositório do app de referência: [controlfinan-rails8-hotwire/benchmark](https://github.com/igorcb/controlfinan-rails8-hotwire/tree/main/benchmark).
 
 ## Como rodar com Docker
 
