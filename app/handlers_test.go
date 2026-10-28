@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -256,6 +257,61 @@ func TestUpdateEntry(t *testing.T) {
 
 	assertEqual(t, res.location, fmt.Sprintf("/current_accounts/%d", e.ID))
 	assertContains(t, ta.get(res.location).body, "Lançamento atualizado.", "R$ 12,50")
+}
+
+func TestUpdateEntryKeepsFieldsAbsentFromTheForm(t *testing.T) {
+	ta := newTestApp(t)
+	u := ta.signIn()
+	e := ta.createEntry(u, entryAttrs{historic: "Corrida"})
+	form := url.Values{"_method": {"patch"}, "current_account[price]": {"42"}}
+
+	res := ta.post(fmt.Sprintf("/current_accounts/%d", e.ID), form)
+
+	assertEqual(t, res.location, fmt.Sprintf("/current_accounts/%d", e.ID))
+	stored, err := FindEntry(context.Background(), testDB, u.ID, e.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEqual(t, stored.PriceCents, int64(4200))
+	assertEqual(t, stored.CostID, e.CostID)
+	assertEqual(t, stored.CashAccountID, e.CashAccountID)
+	assertEqual(t, stored.TypeLaunche, e.TypeLaunche)
+	assertEqual(t, stored.Date.Format("2006-01-02"), e.Date.Format("2006-01-02"))
+	if stored.Historic == nil || *stored.Historic != "Corrida" {
+		t.Fatalf("historic = %v, want Corrida", stored.Historic)
+	}
+}
+
+func TestUpdateEntryWithoutHistoricAndCostKeepsThem(t *testing.T) {
+	ta := newTestApp(t)
+	u := ta.signIn()
+	e := ta.createEntry(u, entryAttrs{historic: "Corrida"})
+	form := validEntryForm()
+	form.Set("_method", "patch")
+	form.Del("current_account[historic]")
+	form.Del("current_account[cost_id]")
+
+	ta.post(fmt.Sprintf("/current_accounts/%d", e.ID), form)
+
+	stored, err := FindEntry(context.Background(), testDB, u.ID, e.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEqual(t, stored.CostID, e.CostID)
+	if stored.Historic == nil || *stored.Historic != "Corrida" {
+		t.Fatalf("historic = %v, want Corrida", stored.Historic)
+	}
+}
+
+func TestUpdateEntryWithAnEmptyPresentRequiredFieldFails(t *testing.T) {
+	ta := newTestApp(t)
+	e := ta.createEntry(ta.signIn(), entryAttrs{})
+	form := url.Values{"_method": {"patch"}, "current_account[price]": {""}}
+
+	res := ta.post(fmt.Sprintf("/current_accounts/%d", e.ID), form)
+
+	assertEqual(t, res.status, http.StatusUnprocessableEntity)
+	assertContains(t, res.body, "Valor não pode ficar em branco")
 }
 
 func TestDeleteEntry(t *testing.T) {
