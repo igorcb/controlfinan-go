@@ -494,7 +494,17 @@ func (s *Server) editEntry(w http.ResponseWriter, r *http.Request) {
 var integerRegexp = regexp.MustCompile(`^-?\d+$`)
 
 // assign copies the form fields into the entry and returns the validation messages.
-func assign(e *Entry, r *http.Request) []string {
+// When partial is true (update), fields whose keys are absent from the form keep
+// their stored value, mirroring Rails' params.expect + update.
+func assign(e *Entry, r *http.Request, partial bool) []string {
+	_ = r.ParseForm()
+	present := func(name string) bool {
+		if !partial {
+			return true
+		}
+		_, ok := r.PostForm["current_account["+name+"]"]
+		return ok
+	}
 	integer := func(name string) int {
 		value := strings.TrimSpace(r.PostFormValue("current_account[" + name + "]"))
 		if !integerRegexp.MatchString(value) {
@@ -503,29 +513,41 @@ func assign(e *Entry, r *http.Request) []string {
 		n, _ := strconv.Atoi(value)
 		return n
 	}
-	e.CashAccountID = integer("cash_account_id")
-	e.CostID = integer("cost_id")
-	switch r.PostFormValue("current_account[type_launche]") {
-	case "debito":
-		e.TypeLaunche = Debit
-	case "credito":
-		e.TypeLaunche = Credit
-	default:
-		e.TypeLaunche = 0
+	if present("cash_account_id") {
+		e.CashAccountID = integer("cash_account_id")
 	}
-	e.Date = time.Time{}
-	if day := parseDate(r.PostFormValue("current_account[date_ocurrence]")); day != nil {
-		e.Date = *day
+	if present("cost_id") {
+		e.CostID = integer("cost_id")
 	}
-	e.PriceText = strings.TrimSpace(r.PostFormValue("current_account[price]"))
-	price, err := strconv.ParseFloat(e.PriceText, 64)
-	e.PriceSet = err == nil
-	if e.PriceSet {
-		e.PriceCents = int64(price*100 + 0.5*sign(price))
+	if present("type_launche") {
+		switch r.PostFormValue("current_account[type_launche]") {
+		case "debito":
+			e.TypeLaunche = Debit
+		case "credito":
+			e.TypeLaunche = Credit
+		default:
+			e.TypeLaunche = 0
+		}
 	}
-	e.Historic = nil
-	if historic := r.PostFormValue("current_account[historic]"); historic != "" {
-		e.Historic = &historic
+	if present("date_ocurrence") {
+		e.Date = time.Time{}
+		if day := parseDate(r.PostFormValue("current_account[date_ocurrence]")); day != nil {
+			e.Date = *day
+		}
+	}
+	if present("price") {
+		e.PriceText = strings.TrimSpace(r.PostFormValue("current_account[price]"))
+		price, err := strconv.ParseFloat(e.PriceText, 64)
+		e.PriceSet = err == nil
+		if e.PriceSet {
+			e.PriceCents = int64(price*100 + 0.5*sign(price))
+		}
+	}
+	if present("historic") {
+		e.Historic = nil
+		if historic := r.PostFormValue("current_account[historic]"); historic != "" {
+			e.Historic = &historic
+		}
 	}
 	return e.Validate()
 }
@@ -539,7 +561,7 @@ func sign(value float64) float64 {
 
 func (s *Server) createEntry(w http.ResponseWriter, r *http.Request) {
 	e := &Entry{UserID: currentUser(r).ID}
-	if errs := assign(e, r); len(errs) > 0 {
+	if errs := assign(e, r, false); len(errs) > 0 {
 		s.render(w, r, "current_accounts_new", http.StatusUnprocessableEntity, formData(e, errs))
 		return
 	}
@@ -555,7 +577,7 @@ func (s *Server) updateEntry(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if errs := assign(e, r); len(errs) > 0 {
+	if errs := assign(e, r, true); len(errs) > 0 {
 		s.render(w, r, "current_accounts_edit", http.StatusUnprocessableEntity, formData(e, errs))
 		return
 	}
